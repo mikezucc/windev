@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Paper, IconButton, TextField, Stack } from '@mui/material';
+import { Box, Paper, IconButton, TextField, Stack, Typography } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -29,40 +29,62 @@ export const BrowserPage: React.FC = () => {
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
 
-  // Listen for URL to load
+  // Use refs to store callbacks to avoid stale closures
+  const urlCallbackRef = useRef<((url: string) => void) | null>(null);
+  const shellIdCallbackRef = useRef<((id: string) => void) | null>(null);
+  const webviewPreloadCallbackRef = useRef<((path: string) => void) | null>(null);
+
+  // Set up listeners once on mount
   useEffect(() => {
-    window.browserAPI.onLoadUrl((loadUrl: string) => {
-      console.log('Received URL to load:', loadUrl);
-      setUrl(loadUrl);
-    });
+    console.log('[BrowserPage] Setting up IPC listeners');
+
+    // URL listener
+    const handleLoadUrl = (loadUrl: string) => {
+      console.log('[BrowserPage] Received URL to load:', loadUrl);
+      if (urlCallbackRef.current) {
+        urlCallbackRef.current(loadUrl);
+      }
+    };
+
+    // Shell ID listener
+    const handleSetShellId = (id: string) => {
+      console.log('[BrowserPage] Received shell ID:', id);
+      if (shellIdCallbackRef.current) {
+        shellIdCallbackRef.current(id);
+      }
+    };
+
+    // Webview preload listener
+    const handleSetWebviewPreload = (preloadPath: string) => {
+      console.log('[BrowserPage] Received webview preload path:', preloadPath);
+      if (webviewPreloadCallbackRef.current) {
+        webviewPreloadCallbackRef.current(preloadPath);
+      }
+    };
+
+    window.browserAPI.onLoadUrl(handleLoadUrl);
+    window.browserAPI.onSetShellId(handleSetShellId);
+    window.browserAPI.onSetWebviewPreload(handleSetWebviewPreload);
 
     return () => {
+      console.log('[BrowserPage] Cleaning up IPC listeners');
       window.browserAPI.removeAllListeners('load-url');
-    };
-  }, []);
-
-  // Listen for shell ID
-  useEffect(() => {
-    window.browserAPI.onSetShellId((id: string) => {
-      console.log('Received shell ID:', id);
-      setShellId(id);
-    });
-
-    return () => {
       window.browserAPI.removeAllListeners('set-shell-id');
-    };
-  }, []);
-
-  // Listen for webview preload path
-  useEffect(() => {
-    window.browserAPI.onSetWebviewPreload((preloadPath: string) => {
-      console.log('Received webview preload path:', preloadPath);
-      setWebviewPreloadPath(preloadPath);
-    });
-
-    return () => {
       window.browserAPI.removeAllListeners('set-webview-preload');
     };
+  }, []);
+
+  // Update callbacks refs when state setters are available
+  useEffect(() => {
+    urlCallbackRef.current = (loadUrl: string) => setUrl(loadUrl);
+  }, []);
+
+  useEffect(() => {
+    shellIdCallbackRef.current = (id: string) => setShellId(id);
+  }, []);
+
+  useEffect(() => {
+    webviewPreloadCallbackRef.current = (path: string) => setWebviewPreloadPath(path);
   }, []);
 
   // Setup webview event listeners
@@ -176,9 +198,22 @@ export const BrowserPage: React.FC = () => {
         </Box>
 
         {/* Claude terminal panel */}
-        {shellId && (
-          <Box sx={{ width: 475, borderLeft: '1px solid #333' }}>
+        {shellId ? (
+          <Box sx={{ width: 475, height: '100%', borderLeft: '1px solid #333' }}>
             <ClaudeShellPanel shellId={shellId} />
+          </Box>
+        ) : (
+          <Box sx={{ width: 475, borderLeft: '1px solid #333', bgcolor: '#1e1e1e', p: 2 }}>
+            <Paper sx={{ p: 2 }}>
+              <Stack spacing={2}>
+                <Typography variant="body2" color="text.secondary">
+                  No Claude Code terminal available
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  To enable the Claude Code terminal, configure a repository path for this service in the main window.
+                </Typography>
+              </Stack>
+            </Paper>
           </Box>
         )}
       </Box>
