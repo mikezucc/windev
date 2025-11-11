@@ -65,12 +65,36 @@ export const BrowserPage: React.FC = () => {
     };
   }, []);
 
+  // Setup webview event listeners
+  useEffect(() => {
+    const webview = webviewRef.current;
+    if (!webview) return;
+
+    const handleDomReady = () => {
+      console.log('Webview dom-ready');
+      updateNavigationButtons();
+    };
+
+    const handleDidNavigate = () => {
+      updateNavigationButtons();
+    };
+
+    webview.addEventListener('dom-ready', handleDomReady);
+    webview.addEventListener('did-navigate', handleDidNavigate);
+    webview.addEventListener('did-navigate-in-page', handleDidNavigate);
+
+    return () => {
+      webview.removeEventListener('dom-ready', handleDomReady);
+      webview.removeEventListener('did-navigate', handleDidNavigate);
+      webview.removeEventListener('did-navigate-in-page', handleDidNavigate);
+    };
+  }, []);
+
   // Load URL in webview when received
   useEffect(() => {
     if (url && webviewRef.current && webviewPreloadPath) {
       console.log('Loading URL in webview:', url);
       webviewRef.current.src = url;
-      updateNavigationButtons();
     }
   }, [url, webviewPreloadPath]);
 
@@ -84,14 +108,12 @@ export const BrowserPage: React.FC = () => {
   const handleBack = () => {
     if (webviewRef.current && canGoBack) {
       webviewRef.current.goBack();
-      updateNavigationButtons();
     }
   };
 
   const handleForward = () => {
     if (webviewRef.current && canGoForward) {
       webviewRef.current.goForward();
-      updateNavigationButtons();
     }
   };
 
@@ -109,7 +131,6 @@ export const BrowserPage: React.FC = () => {
     e.preventDefault();
     if (webviewRef.current && url) {
       webviewRef.current.src = url;
-      updateNavigationButtons();
     }
   };
 

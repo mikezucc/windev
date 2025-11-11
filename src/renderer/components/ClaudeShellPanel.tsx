@@ -39,10 +39,22 @@ export const ClaudeShellPanel: React.FC<ClaudeShellPanelProps> = ({ shellId }) =
     terminal.loadAddon(webLinksAddon);
 
     terminal.open(terminalRef.current);
-    fitAddon.fit();
 
     xtermRef.current = terminal;
     fitAddonRef.current = fitAddon;
+
+    // Delay fit to ensure container has dimensions
+    setTimeout(() => {
+      try {
+        fitAddon.fit();
+        const dimensions = fitAddon.proposeDimensions();
+        if (dimensions && shellId) {
+          window.browserAPI.claudeShellResize(shellId, dimensions.cols, dimensions.rows);
+        }
+      } catch (err) {
+        console.error('Failed to fit terminal:', err);
+      }
+    }, 0);
 
     // Handle terminal input
     terminal.onData((data) => {
@@ -54,10 +66,14 @@ export const ClaudeShellPanel: React.FC<ClaudeShellPanelProps> = ({ shellId }) =
     // Handle resize
     const handleResize = () => {
       if (fitAddonRef.current && xtermRef.current) {
-        fitAddonRef.current.fit();
-        const dimensions = fitAddonRef.current.proposeDimensions();
-        if (dimensions && shellId) {
-          window.browserAPI.claudeShellResize(shellId, dimensions.cols, dimensions.rows);
+        try {
+          fitAddonRef.current.fit();
+          const dimensions = fitAddonRef.current.proposeDimensions();
+          if (dimensions && shellId) {
+            window.browserAPI.claudeShellResize(shellId, dimensions.cols, dimensions.rows);
+          }
+        } catch (err) {
+          console.error('Failed to resize terminal:', err);
         }
       }
     };
