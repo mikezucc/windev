@@ -1,0 +1,86 @@
+{
+  "name": "windev",
+  "version": "1.0.0",
+  "description": "Standalone browser + Claude Code terminal for local web services",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "npm run build && NODE_ENV=development electron .",
+    "start": "npm run build && NODE_ENV=production electron .",
+    "build": "webpack --config webpack.main.config.js && webpack --config webpack.renderer.config.js && webpack --config webpack.preload.config.js",
+    "build:dev": "NODE_ENV=development npm run build",
+    "build:prod": "NODE_ENV=production npm run build",
+    "rebuild": "electron-rebuild",
+    "rebuild:node-pty": "electron-rebuild -f -w node-pty",
+    "clean:rebuild": "rm -rf node_modules/node-pty/build && npm run rebuild:node-pty",
+    "dist": "NODE_ENV=production npm run build && electron-builder",
+    "dist:mac": "NODE_ENV=production npm run build && electron-builder --mac",
+    "dist:win": "NODE_ENV=production npm run build && electron-builder --win",
+    "dist:linux": "NODE_ENV=production npm run build && electron-builder --linux",
+    "postinstall": "electron-rebuild"
+  },
+  "keywords": [
+    "electron",
+    "claude",
+    "development",
+    "browser"
+  ],
+  "author": "Windev",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.2",
+    "@types/node": "^20.19.4",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "css-loader": "^7.1.2",
+    "electron": "^28.1.3",
+    "electron-builder": "^24.9.1",
+    "html-webpack-plugin": "^5.6.3",
+    "style-loader": "^4.0.0",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.3.3",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.15.6",
+    "@mui/material": "^5.15.6",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/xterm": "^5.5.0",
+    "electron-store": "^8.1.0",
+    "node-pty": "1.1.0-beta34",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "build": {
+    "appId": "com.windev.app",
+    "productName": "Windev",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "assets/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "assets/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
