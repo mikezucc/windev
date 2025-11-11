@@ -1,0 +1,8 @@
+### First time ever boot:
+
+In webview console
+```
+Uncaught EvalError: Refused to evaluate a string as JavaScript because 'unsafe-eval' is not an allowed source of script in the following Content Security Policy directive: "script-src 'self' 'unsafe-inline'".
+```
+
+###

@@ -9,7 +9,7 @@ module.exports = {
     browser: './src/renderer/browser/index.tsx',
   },
   target: 'electron-renderer',
-  devtool: process.env.NODE_ENV === 'production' ? 'source-map' : 'eval-source-map',
+  devtool: process.env.NODE_ENV === 'production' ? 'source-map' : 'inline-source-map',
   module: {
     rules: [
       {
