@@ -1,6 +1,8 @@
 # Windev
 
-A local development browser with integrated AI coding assistants.
+A local browser with integrated shell for running `claude` or `codex`.
+
+<img width="1512" height="1012" alt="Screenshot 2025-11-11 at 6 03 54 PM" src="https://github.com/user-attachments/assets/f4343e44-280b-4f34-a34c-756dc2151387" />
 
 ## Overview
 
