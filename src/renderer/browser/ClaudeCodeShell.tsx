@@ -463,9 +463,16 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
     () => ({
       executeCommand: async (command: string) => {
         if (xtermRef.current && shellId && isShellReady) {
-          // Send command with newline
-          const data = command + '\r';
-          await window.browserAPI.claudeShellWrite(shellId, data);
+          // Focus the terminal first
+          xtermRef.current.focus();
+
+          // Small delay to ensure focus is set
+          await new Promise(resolve => setTimeout(resolve, 50));
+
+          // Send command with \r (carriage return) - this is what xterm sends when user presses Enter
+          // The PTY expects \r, not \n, for command execution
+          await window.browserAPI.claudeShellWrite(shellId, command);
+          await window.browserAPI.claudeShellWrite(shellId, '\r');
         }
       },
     }),

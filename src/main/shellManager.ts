@@ -86,7 +86,7 @@ export class ShellManager extends EventEmitter {
 
       // Send initial message and run claude command
       setTimeout(() => {
-        this.emit('output', shellId, windowId, `Claude Code shell initialized in ${repoPath}\n`);
+        // this.emit('output', shellId, windowId, `Claude Code shell initialized in ${repoPath}\n`);
 
         // Wait a bit for shell to be ready, then run claude command
         setTimeout(() => {
