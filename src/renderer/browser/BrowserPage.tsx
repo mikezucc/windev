@@ -160,9 +160,29 @@ export const BrowserPage: React.FC = () => {
   const handleWebviewRef = (element: any) => {
     webviewRef.current = element;
     setWebviewElement(element);
-    
+
     if (element) {
       console.log('Webview element attached to DOM');
+
+      // Fix the internal iframe styling in the shadow root
+      // The webview creates an iframe inside its shadow root that needs explicit height
+      setTimeout(() => {
+        try {
+          const shadowRoot = element.shadowRoot;
+          if (shadowRoot) {
+            const iframe = shadowRoot.querySelector('iframe');
+            if (iframe) {
+              iframe.style.height = '100%';
+              iframe.style.width = '100%';
+              iframe.style.flex = 'none';
+              iframe.style.display = 'block';
+              console.log('Fixed webview internal iframe styling');
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fix webview iframe styling:', e);
+        }
+      }, 100);
     }
   };
 
@@ -262,14 +282,31 @@ export const BrowserPage: React.FC = () => {
       console.log('Webview preload attribute:', webview.getAttribute('preload'));
       console.log('Webview preloadPath state:', webviewPreloadPath);
       setWebviewReady(true);
-      
+
+      // Fix the internal iframe styling
+      try {
+        const shadowRoot = webview.shadowRoot;
+        if (shadowRoot) {
+          const iframe = shadowRoot.querySelector('iframe');
+          if (iframe) {
+            iframe.style.height = '100%';
+            iframe.style.width = '100%';
+            iframe.style.flex = 'none';
+            iframe.style.display = 'block';
+            console.log('Fixed webview internal iframe styling on dom-ready');
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fix webview iframe styling on dom-ready:', e);
+      }
+
       try {
         webview.executeJavaScript(networkLoggingScript);
         console.log('Network logging script injected');
       } catch (e) {
         console.error('Failed to inject network logging script:', e);
       }
-      
+
       // Load pending URL if exists
       if (pendingUrl) {
         console.log('Loading pending URL:', pendingUrl);
@@ -832,16 +869,17 @@ export const BrowserPage: React.FC = () => {
         />
       )}
 
-      <Box display="flex" flex={1} overflow="hidden" position="relative">
+      <Box display="flex" flex={1} overflow="hidden" position="relative" minHeight={0}>
         <Box
           flex={1}
           display="flex"
+          flexDirection="column"
           alignItems="stretch"
-          justifyContent="stretch"
           sx={{
             backgroundColor: responsiveSize ? '#f5f5f5' : 'background.default',
             position: 'relative',
-            overflow: responsiveSize ? 'auto' : 'hidden'
+            overflow: responsiveSize ? 'auto' : 'hidden',
+            minHeight: 0,
           }}
         >
           {responsiveSize && (
@@ -919,16 +957,18 @@ export const BrowserPage: React.FC = () => {
               position: responsiveSize ? 'absolute' : 'relative',
               left: responsiveSize ? '50%' : 0,
               top: responsiveSize ? '50%' : 0,
-              transform: responsiveSize 
+              transform: responsiveSize
                 ? `translate(calc(-50% + ${webviewPosition.x}px), calc(-50% + ${webviewPosition.y}px)) scale(${webviewZoom})`
                 : 'none',
               width: responsiveSize ? (webviewWidth || responsiveSize.width) : '100%',
-              height: responsiveSize ? (webviewHeight || responsiveSize.height) : '100%',
+              height: responsiveSize ? (webviewHeight || responsiveSize.height) : undefined,
+              flex: responsiveSize ? undefined : 1,
               boxShadow: responsiveSize ? 3 : 'none',
               backgroundColor: 'background.paper',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
+              minHeight: 0,
               transition: activeResize || isDraggingWebview ? 'none' : 'transform 0.2s ease-out'
             }}
           >
@@ -990,7 +1030,7 @@ export const BrowserPage: React.FC = () => {
                 </Typography>
               </Box>
             )}
-            <Box flex={1} position="relative">
+            <Box flex={1} position="relative" minHeight={0} display="flex">
               {webviewPreloadPath ? (
                 <webview
                   ref={handleWebviewRef}
@@ -998,6 +1038,8 @@ export const BrowserPage: React.FC = () => {
                     width: '100%',
                     height: '100%',
                     border: 'none',
+                    flex: 'none',
+                    display: 'block',
                   }}
                   webpreferences="contextIsolation=true, nodeIntegration=false, enableRemoteModule=false, sandbox=false"
                   partition="persist:browser"
