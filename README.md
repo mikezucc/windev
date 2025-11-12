@@ -6,7 +6,7 @@ A local browser with integrated shell for running `claude` or `codex`.
 
 ## Overview
 
-Windev is an Electron application that manages browser windows for local development services. Each service configuration includes a URL, repository path, and shell command preference. When opened, a browser window launches with an embedded webview and an integrated terminal running either Claude Code or Codex.
+Windev groups a webview, a coding agent, and console output to easily manage your vibecoding shenanigans. One-click fix for errors or issues in your coding agent of choice.
 
 ## Architecture
 
@@ -28,7 +28,7 @@ The application uses a clean, typographic editorial light theme with system font
 
 ### TypeScript Migration from Legacy Project
 
-The browser page and shell panel components were ported from a previous project with different architecture. This required renaming all API references from `builderAPI` to `browserAPI`, removing repository selection logic in favor of single-service architecture, and eliminating unused concepts like organizations and moments API. Multiple missing components (DebugOutputPanel, ResponsiveSizeSelector, CreateMomentModal) had to be created from scratch. The webm-writer library required custom type declarations.
+This project was cut from a much larger project that I was working on. The project allowed you to use this browser that connects to a "dev box" in the cloud to let you stream updates in real time as the coding agent was making them on your file system. That project needs to be re-written to deal with security flaws and so for now this is the only public aspect of that project.
 
 ### Terminal Display Issues
 
