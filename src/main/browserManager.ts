@@ -50,6 +50,20 @@ class BrowserManager {
         autoHideMenuBar: true,
       });
 
+      // Suppress Electron security warnings for development tool
+      // This is acceptable since we're building a browser that loads arbitrary content
+      process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+
+      // Set session to allow webview without CSP warnings
+      win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+        callback({
+          responseHeaders: {
+            ...details.responseHeaders,
+            'Content-Security-Policy': ['default-src * \'unsafe-inline\' \'unsafe-eval\' data: blob:;']
+          }
+        });
+      });
+
       // Store window reference before loading
       this.windows.set(windowId, {
         id: windowId,

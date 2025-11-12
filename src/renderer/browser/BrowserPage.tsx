@@ -1004,8 +1004,8 @@ export const BrowserPage: React.FC = () => {
                     height: '100%',
                     border: 'none',
                   }}
-                  webpreferences="contextIsolation=true, nodeIntegration=false"
-                  partition="persist:builder"
+                  webpreferences="contextIsolation=true, nodeIntegration=false, enableRemoteModule=false, sandbox=false"
+                  partition="persist:browser"
                   src="about:blank"
                   preload={webviewPreloadPath}
                 />

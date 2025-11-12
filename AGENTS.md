@@ -4,5 +4,5 @@ This is an electron project that allows users to view a web view of their coding
 
 ## Project Development
 
-When you want to validate changes, do NOT attempt to build or run the project. Simply perform a typescript check.
+When you want to validate changes, do NOT attempt to run the project. Simply perform a typescript check or build.
 
