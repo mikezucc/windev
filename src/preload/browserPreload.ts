@@ -16,6 +16,13 @@ interface BrowserAPI {
   onClaudeShellError: (callback: (shellId: string, error: string) => void) => void;
   onClaudeShellExit: (callback: (shellId: string, code: number | null, signal: string | null) => void) => void;
 
+  // Webview Capture API
+  webviewCaptureScreenshot: () => Promise<{ success: boolean; path?: string; error?: string }>;
+  webviewStartRecording: () => Promise<{ success: boolean; error?: string }>;
+  webviewStopRecording: () => Promise<{ success: boolean; path?: string; error?: string; isVideo?: boolean }>;
+  sendRecordingComplete: (videoData: ArrayBuffer | null, error?: string) => void;
+  onRecordingFrame: (callback: (data: any) => void) => void;
+
   // Utility
   copyToClipboard: (text: string) => Promise<{ success: boolean }>;
 }
@@ -64,6 +71,27 @@ const browserAPI: BrowserAPI = {
 
   onClaudeShellExit: (callback: (shellId: string, code: number | null, signal: string | null) => void) => {
     ipcRenderer.on(IpcChannels.CLAUDE_SHELL_EXIT, (_, shellId, code, signal) => callback(shellId, code, signal));
+  },
+
+  // Webview Capture API
+  webviewCaptureScreenshot: () => {
+    return ipcRenderer.invoke(IpcChannels.WEBVIEW_CAPTURE_SCREENSHOT);
+  },
+
+  webviewStartRecording: () => {
+    return ipcRenderer.invoke(IpcChannels.WEBVIEW_START_RECORDING);
+  },
+
+  webviewStopRecording: () => {
+    return ipcRenderer.invoke(IpcChannels.WEBVIEW_STOP_RECORDING);
+  },
+
+  sendRecordingComplete: (videoData: ArrayBuffer | null, error?: string) => {
+    ipcRenderer.send('recording-complete', videoData, error);
+  },
+
+  onRecordingFrame: (callback: (data: any) => void) => {
+    ipcRenderer.on(IpcChannels.WEBVIEW_RECORDING_FRAME, (_, data) => callback(data));
   },
 
   // Utility

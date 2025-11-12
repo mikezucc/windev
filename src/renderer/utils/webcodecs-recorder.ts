@@ -52,7 +52,7 @@ export class WebCodecsRecorder {
 
     try {
       // Convert PNG to ImageData
-      const blob = new Blob([imageData], { type: 'image/png' });
+      const blob = new Blob([imageData as any], { type: 'image/png' });
       const bitmap = await createImageBitmap(blob);
       
       // Draw to canvas to get raw frame data
@@ -134,7 +134,7 @@ export class CanvasRecorder {
 
     try {
       // Create an image element from the PNG data
-      const blob = new Blob([imageData], { type: 'image/png' });
+      const blob = new Blob([imageData as any], { type: 'image/png' });
       const dataUrl = await new Promise<string>((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);

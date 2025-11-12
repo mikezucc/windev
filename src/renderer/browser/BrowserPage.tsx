@@ -14,14 +14,14 @@ import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import HistoryIcon from '@mui/icons-material/History';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { DebugOutputPanel } from '../components/DebugOutputPanel';
-import { ClaudeCodeShellPanel, ClaudeCodeShellPanelRef } from '../components/ClaudeCodeShellPanel';
+import { ClaudeCodeShellPanel, ClaudeCodeShellPanelRef } from './ClaudeCodeShell';
 import { BuilderConsoleMessage, IpcChannels } from '../../shared/ipc-channels';
 import { CreateMomentModal } from '../components/moments/CreateMomentModal';
 import { Snackbar, Alert } from '@mui/material';
 import { CanvasRecorder } from '../utils/webcodecs-recorder';
 import { ResponsiveSizeSelector, ResponsiveSize, RESPONSIVE_SIZES } from '../components/ResponsiveSizeSelector';
 
-export const BuilderBrowserPage: React.FC = () => {
+export const BrowserPage: React.FC = () => {
   const [repoPath, setRepoPath] = useState<string | null>(null);
   const [repositoryUrl, setRepositoryUrl] = useState<string | null>(null);
   const [url, setUrl] = useState('');
@@ -45,7 +45,6 @@ export const BuilderBrowserPage: React.FC = () => {
   const [capturedFile, setCapturedFile] = useState<{ path: string; type: 'screenshot' | 'recording' } | null>(null);
   const [createMomentOpen, setCreateMomentOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<{ text: string; severity: 'success' | 'error' | 'info' } | null>(null);
-  const [organizationId, setOrganizationId] = useState<string>('');
   const [captureFile, setCaptureFile] = useState<File | null>(null);
   const recorderRef = useRef<CanvasRecorder | null>(null);
   const [responsiveSize, setResponsiveSize] = useState<ResponsiveSize | null>(null);
@@ -57,47 +56,6 @@ export const BuilderBrowserPage: React.FC = () => {
   const [webviewZoom, setWebviewZoom] = useState(1);
   const [activeResize, setActiveResize] = useState<'left' | 'right' | 'bottom' | 'bottom-left' | 'bottom-right' | null>(null);
   const [webviewPreloadPath, setWebviewPreloadPath] = useState<string>('');
-  
-  // Save domain-repo mapping when URL and repo are both available
-  const saveDomainRepoMapping = React.useCallback(async (currentUrl: string, currentRepo: string) => {
-    if (!currentUrl || !currentRepo || !window.builderAPI) return;
-    
-    try {
-      await (window.builderAPI as any).saveDomainRepoMapping(currentUrl, currentRepo);
-      console.log(`Saved domain-repo mapping: ${currentUrl} -> ${currentRepo}`);
-    } catch (error) {
-      console.error('Failed to save domain-repo mapping:', error);
-    }
-  }, []);
-  
-  // Fetch organization ID on mount
-  useEffect(() => {
-    const fetchOrganization = async () => {
-      try {
-        const result = await window.builderAPI.orchestratorGetOrganizations();
-        if (result && result.data && result.data.length > 0) {
-          setOrganizationId(result.data[0].id);
-        }
-      } catch (error) {
-        console.error('Failed to fetch organizations:', error);
-      }
-    };
-    fetchOrganization();
-  }, []);
-  
-  // Listen for repository path
-  useEffect(() => {
-    const handleSetRepoPath = (path: string) => {
-      console.log('Received repository path:', path);
-      setRepoPath(path);
-    };
-    
-    window.builderAPI.onSetRepoPath(handleSetRepoPath);
-    
-    return () => {
-      window.builderAPI.removeAllListeners('set-repo-path');
-    };
-  }, []);
   
   // Listen for webview preload path
   useEffect(() => {
@@ -116,10 +74,10 @@ export const BuilderBrowserPage: React.FC = () => {
       }
     };
     
-    window.builderAPI.onSetWebviewPreload(handleSetWebviewPreload);
+    window.browserAPI.onSetWebviewPreload(handleSetWebviewPreload);
     
     return () => {
-      window.builderAPI.removeAllListeners('set-webview-preload');
+      window.browserAPI.removeAllListeners('set-webview-preload');
     };
   }, [webviewReady, url]);
   
@@ -128,15 +86,10 @@ export const BuilderBrowserPage: React.FC = () => {
     if (repoPath) {
       setRepositoryUrl(repoPath);
       console.log('Repository path:', repoPath);
-      
-      // Save domain-repo mapping when repository changes
-      if (url && url !== 'about:blank') {
-        saveDomainRepoMapping(url, repoPath);
-      }
     } else {
       setRepositoryUrl(null);
     }
-  }, [repoPath, url, saveDomainRepoMapping]);
+  }, [repoPath]);
   
   // Listen for recording frames
   useEffect(() => {
@@ -153,20 +106,20 @@ export const BuilderBrowserPage: React.FC = () => {
         try {
           const videoData = await recorderRef.current.finishRecording();
           // Send video data back to main process
-          window.builderAPI.sendRecordingComplete(videoData);
+          window.browserAPI.sendRecordingComplete(videoData.buffer as ArrayBuffer);
           recorderRef.current = null;
         } catch (error) {
           console.error('Error finishing recording:', error);
-          window.builderAPI.sendRecordingComplete(null, error instanceof Error ? error.message : 'Failed to encode video');
+          window.browserAPI.sendRecordingComplete(null, error instanceof Error ? error.message : 'Failed to encode video');
         }
       }
     };
     
     // Listen for recording frames
-    window.builderAPI.onRecordingFrame(handleRecordingFrame);
+    window.browserAPI.onRecordingFrame(handleRecordingFrame);
     
     return () => {
-      window.builderAPI.removeAllListeners(IpcChannels.WEBVIEW_RECORDING_FRAME);
+      window.browserAPI.removeAllListeners(IpcChannels.WEBVIEW_RECORDING_FRAME);
     };
   }, []);
   
@@ -186,10 +139,10 @@ export const BuilderBrowserPage: React.FC = () => {
       }
     };
     
-    window.builderAPI.onLoadUrl(handleLoadUrl);
+    window.browserAPI.onLoadUrl(handleLoadUrl);
 
     return () => {
-      window.builderAPI.removeAllListeners('load-url');
+      window.browserAPI.removeAllListeners('load-url');
     };
   }, [webviewReady]);
 
@@ -349,11 +302,6 @@ export const BuilderBrowserPage: React.FC = () => {
           }
         }, 100);
       }
-      
-      // Save domain-repo mapping when navigating to a new URL
-      if (e.url && e.url !== 'about:blank' && repoPath) {
-        saveDomainRepoMapping(e.url, repoPath);
-      }
     };
 
     const handleDidStartLoading = () => {
@@ -413,7 +361,7 @@ export const BuilderBrowserPage: React.FC = () => {
       setMessages(prev => [...prev, newMessage]);
       
       // Forward to main process
-      window.builderAPI.sendConsoleMessage({
+      window.browserAPI.sendConsoleMessage({
         type: newMessage.type,
         message: newMessage.message,
         timestamp: newMessage.timestamp,
@@ -467,7 +415,7 @@ export const BuilderBrowserPage: React.FC = () => {
       setMessages(prev => [...prev, newMessage]);
       
       // Forward to main process
-      window.builderAPI.sendConsoleMessage({
+      window.browserAPI.sendConsoleMessage({
         type: newMessage.type,
         message: newMessage.message,
         timestamp: newMessage.timestamp,
@@ -564,7 +512,7 @@ export const BuilderBrowserPage: React.FC = () => {
     if (!webviewRef.current || !webviewReady) return;
     
     try {
-      const result = await window.builderAPI.webviewCaptureScreenshot();
+      const result = await window.browserAPI.webviewCaptureScreenshot();
       if (result.success && result.path) {
         setCapturedFile({ path: result.path, type: 'screenshot' });
         
@@ -590,7 +538,7 @@ export const BuilderBrowserPage: React.FC = () => {
     if (!webviewRef.current || !webviewReady || isRecording) return;
     
     try {
-      const result = await window.builderAPI.webviewStartRecording();
+      const result = await window.browserAPI.webviewStartRecording();
       if (result.success) {
         setIsRecording(true);
         console.log('Recording started');
@@ -606,7 +554,7 @@ export const BuilderBrowserPage: React.FC = () => {
     if (!isRecording) return;
     
     try {
-      const result = await window.builderAPI.webviewStopRecording();
+      const result = await window.browserAPI.webviewStopRecording();
       if (result.success && result.path) {
         setIsRecording(false);
         setCapturedFile({ path: result.path, type: 'recording' });
@@ -1451,7 +1399,7 @@ export const BuilderBrowserPage: React.FC = () => {
           setCreateMomentOpen(false);
           setCaptureFile(null);
         }}
-        organizationId={organizationId}
+        organizationId=""
         onSuccess={() => {
           setSnackbarMessage({ text: 'Moment created successfully!', severity: 'success' });
           setCaptureFile(null);

@@ -6,17 +6,12 @@ import {
   IconButton,
   Stack,
   Tooltip,
-  InputAdornment,
-  Select,
-  MenuItem,
-  FormControl,
   Chip,
 } from '@mui/material';
 import ClearIcon from '@mui/icons-material/Clear';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import FolderIcon from '@mui/icons-material/Folder';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import { Repository } from '../../shared/ipc-channels';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -30,8 +25,7 @@ interface ClaudeCodeShellPanelProps {
 
 export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, ClaudeCodeShellPanelProps>(
   ({ onCommandExecute, initialRepo }, ref) => {
-  const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [selectedRepo, setSelectedRepo] = useState<string>('');
+  const [repoPath, setRepoPath] = useState<string>(initialRepo || '');
   const [shellId, setShellId] = useState<string | null>(null);
   const [isShellReady, setIsShellReady] = useState(false);
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -39,9 +33,6 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
   const fitAddonRef = useRef<FitAddon | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const scrollLockRef = useRef<boolean>(false);
-
-  // Check if we're in the builder browser context
-  const isBuilderContext = !window.electronAPI && window.builderAPI;
 
   // Handle file drop
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -58,15 +49,11 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
     // Send the file paths to the terminal
     const pathsString = filePaths.join(' ');
     try {
-      if (isBuilderContext) {
-        await window.builderAPI.claudeShellWrite(shellId, pathsString);
-      } else {
-        await window.electronAPI.claudeShellWrite(shellId, pathsString);
-      }
+      await window.browserAPI.claudeShellWrite(shellId, pathsString);
     } catch (error) {
       console.error('Error sending file paths to shell:', error);
     }
-  }, [shellId, isShellReady, isBuilderContext]);
+  }, [shellId, isShellReady]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -78,56 +65,12 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
     onDropRejected: () => setIsDragging(false),
   });
 
-  // Load repositories on mount
+  // Initialize repoPath from initialRepo prop
   useEffect(() => {
-    const loadRepositories = async () => {
-      try {
-        let repos;
-        if (isBuilderContext) {
-          repos = await window.builderAPI.getRepositories();
-        } else {
-          repos = await window.electronAPI.getRepositories();
-        }
-        
-        setRepositories(repos);
-        if (initialRepo) {
-          // Use the initial repo if provided and it exists in the list
-          const repoExists = repos.some(r => r.path === initialRepo);
-          if (repoExists) {
-            setSelectedRepo(initialRepo);
-          } else if (repos.length > 0 && !selectedRepo) {
-            setSelectedRepo(repos[0].path);
-          }
-        } else if (repos.length > 0 && !selectedRepo) {
-          setSelectedRepo(repos[0].path);
-        }
-      } catch (error) {
-        console.error('Failed to load repositories:', error);
-      }
-    };
-    loadRepositories();
-  }, [isBuilderContext, initialRepo]);
-
-  // Listen for repository path from builder context
-  useEffect(() => {
-    if (!isBuilderContext || !window.builderAPI) return;
-
-    const handleSetRepoPath = (path: string) => {
-      console.log('ClaudeCodeShellPanel received repository path:', path);
-      // Check if this repo exists in our list
-      const repoExists = repositories.some(repo => repo.path === path);
-      if (repoExists || repositories.length === 0) {
-        // If repo exists or we haven't loaded repos yet, set it
-        setSelectedRepo(path);
-      }
-    };
-    
-    window.builderAPI.onSetRepoPath(handleSetRepoPath);
-    
-    return () => {
-      window.builderAPI.removeAllListeners('set-repo-path');
-    };
-  }, [isBuilderContext, repositories]);
+    if (initialRepo && !repoPath) {
+      setRepoPath(initialRepo);
+    }
+  }, [initialRepo, repoPath]);
 
   // Add right-click context menu handler
   const handleContextMenu = useCallback((e: MouseEvent) => {
@@ -200,11 +143,7 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
       try {
         const text = await navigator.clipboard.readText();
         if (text && shellId && isShellReady) {
-          if (isBuilderContext) {
-            await window.builderAPI.claudeShellWrite(shellId, text);
-          } else {
-            await window.electronAPI.claudeShellWrite(shellId, text);
-          }
+          await window.browserAPI.claudeShellWrite(shellId, text);
         }
       } catch (err) {
         console.error('Failed to paste:', err);
@@ -250,7 +189,7 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
     setTimeout(() => {
       document.addEventListener('click', removeMenu);
     }, 0);
-  }, [shellId, isShellReady, isBuilderContext]);
+  }, [shellId, isShellReady]);
 
   // Initialize xterm.js
   useEffect(() => {
@@ -360,13 +299,9 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
       if (fitAddonRef.current && xtermRef.current) {
         fitAddonRef.current.fit();
         const { cols, rows } = xtermRef.current;
-        
+
         // Send resize to PTY
-        if (isBuilderContext && (window.builderAPI as any).claudeShellResize) {
-          (window.builderAPI as any).claudeShellResize(shellId, cols, rows);
-        } else if (!isBuilderContext && (window.electronAPI as any).claudeShellResize) {
-          (window.electronAPI as any).claudeShellResize(shellId, cols, rows);
-        }
+        window.browserAPI.claudeShellResize(shellId, cols, rows);
       }
     };
 
@@ -381,14 +316,10 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
     return () => {
       resizeObserver.disconnect();
     };
-  }, [shellId, isBuilderContext]);
+  }, [shellId]);
 
   // Set up shell event listeners
   useEffect(() => {
-    if (isBuilderContext && !window.builderAPI) {
-      return;
-    }
-
     const handleOutput = (id: string, output: string) => {
       if (id !== shellId || !xtermRef.current) return;
       
@@ -435,20 +366,14 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
       xtermRef.current.write(exitMessage);
     };
 
-    if (isBuilderContext) {
-      window.builderAPI.onClaudeShellOutput(handleOutput);
-      window.builderAPI.onClaudeShellError(handleError);
-      window.builderAPI.onClaudeShellExit(handleExit);
-    } else {
-      window.electronAPI.onClaudeShellOutput(handleOutput);
-      window.electronAPI.onClaudeShellError(handleError);
-      window.electronAPI.onClaudeShellExit(handleExit);
-    }
+    window.browserAPI.onClaudeShellOutput(handleOutput);
+    window.browserAPI.onClaudeShellError(handleError);
+    window.browserAPI.onClaudeShellExit(handleExit);
 
     return () => {
       // Clean up listeners
     };
-  }, [shellId, isBuilderContext]);
+  }, [shellId]);
 
   // Handle terminal input
   useEffect(() => {
@@ -458,12 +383,7 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
       if (!shellId || !isShellReady) return;
 
       try {
-        let result;
-        if (isBuilderContext) {
-          result = await window.builderAPI.claudeShellWrite(shellId, data);
-        } else {
-          result = await window.electronAPI.claudeShellWrite(shellId, data);
-        }
+        const result = await window.browserAPI.claudeShellWrite(shellId, data);
         if (!result.success) {
           console.error('Failed to send data to shell');
         }
@@ -475,29 +395,27 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
     return () => {
       disposable.dispose();
     };
-  }, [shellId, isShellReady, isBuilderContext]);
+  }, [shellId, isShellReady]);
 
-  const initializeShell = useCallback(async (repoPath?: string) => {
-    const targetRepo = repoPath || selectedRepo;
+  const initializeShell = useCallback(async (targetRepoPath?: string) => {
+    const targetRepo = targetRepoPath || repoPath;
     if (!targetRepo || shellId) return;
-    
+
     try {
       if (xtermRef.current) {
         xtermRef.current.write(`\x1b[32mInitializing Claude Code session in ${targetRepo}...\x1b[0m\n`);
       }
-      
-      let result;
-      if (isBuilderContext) {
-        result = await window.builderAPI.claudeShellCreate(targetRepo);
-      } else {
-        result = await window.electronAPI.claudeShellCreate(targetRepo);
-      }
+
+      // Note: Shell creation happens in main process, we just wait for shellId
+      // The shell should already be created and passed via onSetShellId
+      const result = { success: true, shellId: shellId };
+
       if (result.success && result.shellId) {
         setShellId(result.shellId);
         setIsShellReady(true);
       } else {
         if (xtermRef.current) {
-          xtermRef.current.write(`\x1b[31mError: ${result.error || 'Failed to create shell'}\x1b[0m\n`);
+          xtermRef.current.write(`\x1b[31mError: Failed to initialize shell\x1b[0m\n`);
         }
       }
     } catch (error) {
@@ -506,7 +424,7 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
         xtermRef.current.write(`\x1b[31mError: Failed to initialize Claude shell\x1b[0m\n`);
       }
     }
-  }, [shellId, isBuilderContext, selectedRepo]);
+  }, [shellId, repoPath]);
 
   const handleClear = () => {
     if (xtermRef.current) {
@@ -516,68 +434,39 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
 
   const handleRestart = async () => {
     if (shellId) {
-      if (isBuilderContext) {
-        await window.builderAPI.claudeShellDestroy(shellId);
-      } else {
-        await window.electronAPI.claudeShellDestroy(shellId);
-      }
+      await window.browserAPI.claudeShellDestroy(shellId);
       setShellId(null);
       setIsShellReady(false);
     }
     if (xtermRef.current) {
       xtermRef.current.clear();
     }
-    await initializeShell(selectedRepo);
+    await initializeShell(repoPath);
   };
 
-  const handleRepoChange = async (newRepo: string) => {
-    // Don't do anything if selecting the same repo
-    if (newRepo === selectedRepo) return;
-
-    // Destroy current shell if it exists
-    if (shellId) {
-      if (isBuilderContext) {
-        await window.builderAPI.claudeShellDestroy(shellId);
-      } else {
-        await window.electronAPI.claudeShellDestroy(shellId);
-      }
-      setShellId(null);
-      setIsShellReady(false);
-    }
-    
-    // Clear the terminal
-    if (xtermRef.current) {
-      xtermRef.current.clear();
-    }
-    
-    // Update the selected repo
-    setSelectedRepo(newRepo);
-    
-    // Initialize new shell with the new repository
-    setTimeout(async () => {
-      await initializeShell(newRepo);
-    }, 100);
-  };
-
-  // Initialize shell when repo is selected
+  // Wait for shellId to be set from main process via onSetShellId
   useEffect(() => {
-    if (selectedRepo && !shellId && xtermRef.current) {
-      initializeShell(selectedRepo);
-    }
-  }, [selectedRepo, shellId]);
+    const handleSetShellId = (id: string) => {
+      console.log('Received shell ID:', id);
+      setShellId(id);
+      setIsShellReady(true);
+    };
+
+    window.browserAPI.onSetShellId(handleSetShellId);
+
+    return () => {
+      window.browserAPI.removeAllListeners('set-shell-id');
+    };
+  }, []);
 
   // Cleanup shell on unmount
   useEffect(() => {
     return () => {
       if (shellId) {
-        if (isBuilderContext) {
-          window.builderAPI.claudeShellDestroy(shellId);
-        } else {
-          window.electronAPI.claudeShellDestroy(shellId);
-        }
+        window.browserAPI.claudeShellDestroy(shellId);
       }
     };
-  }, [shellId, isBuilderContext]);
+  }, [shellId]);
   
   // Prevent arrow keys from scrolling the page
   useEffect(() => {
@@ -607,15 +496,11 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
         if (xtermRef.current && shellId && isShellReady) {
           // Send command with newline
           const data = command + '\r';
-          if (isBuilderContext) {
-            await window.builderAPI.claudeShellWrite(shellId, data);
-          } else {
-            await window.electronAPI.claudeShellWrite(shellId, data);
-          }
+          await window.browserAPI.claudeShellWrite(shellId, data);
         }
       },
     }),
-    [shellId, isShellReady, isBuilderContext]
+    [shellId, isShellReady]
   );
 
   return (
@@ -666,57 +551,25 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
             )}
           </Stack>
           <Stack direction="row" spacing={0.5}>
-            <FormControl size="small" sx={{ minWidth: 200 }}>
-              <Select
-                  value={selectedRepo}
-                  onChange={(e) => handleRepoChange(e.target.value)}
-                  displayEmpty
-                  startAdornment={
-                    <InputAdornment position="start">
-                      <FolderIcon sx={{ fontSize: 14, color: '#ffcb6b' }} />
-                    </InputAdornment>
-                  }
-                  sx={{ 
-                    fontSize: '0.7rem',
-                    height: 24,
-                    bgcolor: '#0d0d0d',
-                    color: '#e0e0e0',
-                    '& .MuiSelect-select': {
-                      py: 0.5,
-                      display: 'flex',
-                      alignItems: 'center'
-                    },
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#3a3a3a',
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#4a4a4a',
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#5a5a5a',
-                    },
-                    '& .MuiSvgIcon-root': {
-                      color: '#666'
-                    }
-                  }}
-                >
-                  {repositories.length === 0 ? (
-                    <MenuItem value="" disabled>
-                      <Typography variant="caption" color="text.secondary">
-                        No repositories available
-                      </Typography>
-                    </MenuItem>
-                  ) : (
-                    repositories.map((repo) => (
-                      <MenuItem key={repo.id} value={repo.path}>
-                        <Typography variant="caption" noWrap>
-                          {repo.name}
-                        </Typography>
-                      </MenuItem>
-                    ))
-                  )}
-                </Select>
-              </FormControl>
+            {repoPath && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 1,
+                  bgcolor: '#0d0d0d',
+                  borderRadius: 0.5,
+                  border: 1,
+                  borderColor: '#3a3a3a',
+                }}
+              >
+                <FolderIcon sx={{ fontSize: 14, color: '#ffcb6b' }} />
+                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#e0e0e0' }} noWrap>
+                  {repoPath.split('/').pop()}
+                </Typography>
+              </Box>
+            )}
             <Tooltip title="Restart shell">
               <IconButton size="small" onClick={handleRestart} sx={{ p: 0.5, color: '#666', '&:hover': { color: '#e0e0e0' } }}>
                 <RestartAltIcon sx={{ fontSize: 16 }} />
