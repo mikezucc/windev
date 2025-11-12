@@ -169,19 +169,35 @@ export default function App() {
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1">
-          Projects
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => handleOpenDialog()}
-        >
-          Add Project
-        </Button>
-      </Box>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: `
+          linear-gradient(30deg, #f5f5f5 12%, transparent 12.5%, transparent 87%, #f5f5f5 87.5%, #f5f5f5),
+          linear-gradient(150deg, #f5f5f5 12%, transparent 12.5%, transparent 87%, #f5f5f5 87.5%, #f5f5f5),
+          linear-gradient(30deg, #f5f5f5 12%, transparent 12.5%, transparent 87%, #f5f5f5 87.5%, #f5f5f5),
+          linear-gradient(150deg, #f5f5f5 12%, transparent 12.5%, transparent 87%, #f5f5f5 87.5%, #f5f5f5),
+          linear-gradient(60deg, #f9f9f9 25%, transparent 25.5%, transparent 75%, #f9f9f9 75%, #f9f9f9),
+          linear-gradient(60deg, #f9f9f9 25%, transparent 25.5%, transparent 75%, #f9f9f9 75%, #f9f9f9)
+        `,
+        backgroundSize: '80px 140px',
+        backgroundPosition: '0 0, 0 0, 40px 70px, 40px 70px, 0 0, 40px 70px',
+        backgroundColor: '#ffffff',
+      }}
+    >
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 300 }}>
+            Projects
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => handleOpenDialog()}
+          >
+            Add Project
+          </Button>
+        </Box>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {services.length === 0 ? (
@@ -326,6 +342,7 @@ export default function App() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+      </Container>
+    </Box>
   );
 }
