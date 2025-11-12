@@ -12,18 +12,13 @@ interface ClaudeShellPanelProps {
 }
 
 export const ClaudeShellPanel: React.FC<ClaudeShellPanelProps> = ({ shellId }) => {
-  console.log('[ClaudeShellPanel] Component mounted/rendered with shellId:', shellId);
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
 
   // Initialize terminal
   useEffect(() => {
-    console.log('[ClaudeShellPanel] Initializing terminal, terminalRef:', terminalRef.current, 'xtermRef:', xtermRef.current);
-    if (!terminalRef.current || xtermRef.current) {
-      console.log('[ClaudeShellPanel] Skipping terminal init - already initialized or no ref');
-      return;
-    }
+    if (!terminalRef.current || xtermRef.current) return;
 
     console.log('[ClaudeShellPanel] Creating new Terminal instance');
     const terminal = new Terminal({
@@ -63,7 +58,7 @@ export const ClaudeShellPanel: React.FC<ClaudeShellPanelProps> = ({ shellId }) =
       } catch (err) {
         console.error('Failed to fit terminal:', err);
       }
-    }, 200);
+    }, 100);
 
     // Handle terminal input
     terminal.onData((data) => {
@@ -87,20 +82,23 @@ export const ClaudeShellPanel: React.FC<ClaudeShellPanelProps> = ({ shellId }) =
       }
     };
 
-    window.addEventListener('resize', handleResize);
+    const resizeObserver = new ResizeObserver(handleResize);
+    if (terminalRef.current) {
+      resizeObserver.observe(terminalRef.current);
+    }
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       terminal.dispose();
     };
-  }, []);
+  }, [shellId]);
 
   // Handle shell output
   useEffect(() => {
     console.log('[ClaudeShellPanel] Setting up shell output listeners for shellId:', shellId);
 
     const handleOutput = (id: string, data: string) => {
-      console.log('[ClaudeShellPanel] Received output for shell:', id, 'expected:', shellId, 'data length:', data.length, 'xtermRef.current', xtermRef.current);
+      console.log('[ClaudeShellPanel] Received output for shell:', id, 'expected:', shellId, 'data length:', data.length, 'xtermRef.current:', xtermRef.current);
       if (id === shellId && xtermRef.current) {
         xtermRef.current.write(data);
       }
@@ -153,7 +151,7 @@ export const ClaudeShellPanel: React.FC<ClaudeShellPanelProps> = ({ shellId }) =
         ref={terminalRef}
         sx={{
           flex: 1,
-          overflow: 'scroll',
+          overflow: 'hidden',
           bgcolor: '#1e1e1e',
           '& .xterm': {
             height: '100%',

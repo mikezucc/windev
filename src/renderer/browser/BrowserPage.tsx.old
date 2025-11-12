@@ -26,106 +26,131 @@ export const BrowserPage: React.FC = () => {
   const [shellId, setShellId] = useState<string | null>(null);
   const [webviewPreloadPath, setWebviewPreloadPath] = useState<string>('');
   const webviewRef = useRef<any>(null);
+  const [webviewElement, setWebviewElement] = useState<any>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
+  const [webviewReady, setWebviewReady] = useState(false);
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
 
-  // Use refs to store callbacks to avoid stale closures
-  const urlCallbackRef = useRef<((url: string) => void) | null>(null);
-  const shellIdCallbackRef = useRef<((id: string) => void) | null>(null);
-  const webviewPreloadCallbackRef = useRef<((path: string) => void) | null>(null);
-
-  // Set up listeners once on mount
+  // Listen for URL to load
   useEffect(() => {
-    console.log('[BrowserPage] Setting up IPC listeners');
+    const handleLoadUrl = (targetUrl: string) => {
+      console.log('[BrowserPage] Received URL to load:', targetUrl, 'webviewReady:', webviewReady);
 
-    // URL listener
-    const handleLoadUrl = (loadUrl: string) => {
-      console.log('[BrowserPage] Received URL to load:', loadUrl);
-      if (urlCallbackRef.current) {
-        urlCallbackRef.current(loadUrl);
-      }
-    };
-
-    // Shell ID listener
-    const handleSetShellId = (id: string) => {
-      console.log('[BrowserPage] Received shell ID:', id);
-      if (shellIdCallbackRef.current) {
-        shellIdCallbackRef.current(id);
-      }
-    };
-
-    // Webview preload listener
-    const handleSetWebviewPreload = (preloadPath: string) => {
-      console.log('[BrowserPage] Received webview preload path:', preloadPath);
-      if (webviewPreloadCallbackRef.current) {
-        webviewPreloadCallbackRef.current(preloadPath);
+      if (webviewReady && webviewRef.current) {
+        console.log('[BrowserPage] Webview is ready, loading URL immediately');
+        setUrl(targetUrl);
+        webviewRef.current.loadURL(targetUrl);
+      } else {
+        console.log('[BrowserPage] Webview not ready yet, storing URL for later');
+        setPendingUrl(targetUrl);
       }
     };
 
     window.browserAPI.onLoadUrl(handleLoadUrl);
+
+    return () => {
+      window.browserAPI.removeAllListeners('load-url');
+    };
+  }, [webviewReady]);
+
+  // Listen for shell ID
+  useEffect(() => {
+    const handleSetShellId = (id: string) => {
+      console.log('[BrowserPage] Received shell ID:', id);
+      setShellId(id);
+    };
+
     window.browserAPI.onSetShellId(handleSetShellId);
+
+    return () => {
+      window.browserAPI.removeAllListeners('set-shell-id');
+    };
+  }, []);
+
+  // Listen for webview preload path
+  useEffect(() => {
+    const handleSetWebviewPreload = (preloadPath: string) => {
+      console.log('[BrowserPage] Received webview preload path:', preloadPath);
+      setWebviewPreloadPath(preloadPath);
+    };
+
     window.browserAPI.onSetWebviewPreload(handleSetWebviewPreload);
 
     return () => {
-      console.log('[BrowserPage] Cleaning up IPC listeners');
-      window.browserAPI.removeAllListeners('load-url');
-      window.browserAPI.removeAllListeners('set-shell-id');
       window.browserAPI.removeAllListeners('set-webview-preload');
     };
   }, []);
 
-  // Update callbacks refs when state setters are available
+  // Try to load URL when webview becomes ready
   useEffect(() => {
-    urlCallbackRef.current = (loadUrl: string) => setUrl(loadUrl);
-  }, []);
+    if (webviewReady && pendingUrl && webviewRef.current) {
+      console.log('[BrowserPage] Webview is now ready, loading pending URL:', pendingUrl);
+      setUrl(pendingUrl);
+      webviewRef.current.loadURL(pendingUrl);
+      setPendingUrl(null);
+    }
+  }, [webviewReady, pendingUrl]);
 
-  useEffect(() => {
-    shellIdCallbackRef.current = (id: string) => setShellId(id);
-  }, []);
+  // Handle webview ref callback
+  const handleWebviewRef = (element: any) => {
+    webviewRef.current = element;
+    setWebviewElement(element);
 
-  useEffect(() => {
-    webviewPreloadCallbackRef.current = (path: string) => setWebviewPreloadPath(path);
-  }, []);
+    if (element) {
+      console.log('[BrowserPage] Webview element attached to DOM');
+    }
+  };
 
   // Setup webview event listeners
   useEffect(() => {
-    const webview = webviewRef.current;
-    if (!webview) return;
+    if (!webviewElement || !webviewPreloadPath) return;
+
+    const webview = webviewElement;
 
     const handleDomReady = () => {
-      console.log('Webview dom-ready');
-      updateNavigationButtons();
+      console.log('[BrowserPage] Webview DOM ready');
+      setWebviewReady(true);
+
+      // Load pending URL if exists
+      if (pendingUrl) {
+        console.log('[BrowserPage] Loading pending URL:', pendingUrl);
+        setUrl(pendingUrl);
+        webview.loadURL(pendingUrl);
+        setPendingUrl(null);
+      }
     };
 
-    const handleDidNavigate = () => {
-      updateNavigationButtons();
+    const handleDidNavigate = (e: any) => {
+      console.log('[BrowserPage] Webview did navigate:', e.url);
+      setUrl(e.url);
+      setCanGoBack(webview.canGoBack());
+      setCanGoForward(webview.canGoForward());
     };
 
+    const handleDidStartLoading = () => {
+      console.log('[BrowserPage] Webview started loading');
+    };
+
+    const handleDidStopLoading = () => {
+      console.log('[BrowserPage] Webview stopped loading');
+    };
+
+    // Add event listeners
     webview.addEventListener('dom-ready', handleDomReady);
     webview.addEventListener('did-navigate', handleDidNavigate);
     webview.addEventListener('did-navigate-in-page', handleDidNavigate);
+    webview.addEventListener('did-start-loading', handleDidStartLoading);
+    webview.addEventListener('did-stop-loading', handleDidStopLoading);
 
     return () => {
       webview.removeEventListener('dom-ready', handleDomReady);
       webview.removeEventListener('did-navigate', handleDidNavigate);
       webview.removeEventListener('did-navigate-in-page', handleDidNavigate);
+      webview.removeEventListener('did-start-loading', handleDidStartLoading);
+      webview.removeEventListener('did-stop-loading', handleDidStopLoading);
     };
-  }, []);
-
-  // Load URL in webview when received
-  useEffect(() => {
-    if (url && webviewRef.current && webviewPreloadPath) {
-      console.log('Loading URL in webview:', url);
-      webviewRef.current.src = url;
-    }
-  }, [url, webviewPreloadPath]);
-
-  const updateNavigationButtons = () => {
-    if (webviewRef.current) {
-      setCanGoBack(webviewRef.current.canGoBack());
-      setCanGoForward(webviewRef.current.canGoForward());
-    }
-  };
+  }, [webviewElement, webviewPreloadPath, pendingUrl]);
 
   const handleBack = () => {
     if (webviewRef.current && canGoBack) {
@@ -140,7 +165,7 @@ export const BrowserPage: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    if (webviewRef.current) {
+    if (webviewRef.current && webviewReady) {
       webviewRef.current.reload();
     }
   };
@@ -151,8 +176,12 @@ export const BrowserPage: React.FC = () => {
 
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (webviewRef.current && url) {
-      webviewRef.current.src = url;
+    if (webviewRef.current && webviewReady && url) {
+      let finalUrl = url;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        finalUrl = 'https://' + url;
+      }
+      webviewRef.current.loadURL(finalUrl);
     }
   };
 
@@ -167,7 +196,7 @@ export const BrowserPage: React.FC = () => {
           <IconButton onClick={handleForward} disabled={!canGoForward} size="small">
             <ArrowForwardIcon />
           </IconButton>
-          <IconButton onClick={handleRefresh} size="small">
+          <IconButton onClick={handleRefresh} size="small" disabled={!webviewReady}>
             <RefreshIcon />
           </IconButton>
           <Box component="form" onSubmit={handleUrlSubmit} sx={{ flex: 1 }}>
@@ -186,15 +215,33 @@ export const BrowserPage: React.FC = () => {
       <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Webview container */}
         <Box sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-          <webview
-            ref={webviewRef}
-            preload={webviewPreloadPath}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-            }}
-          />
+          {webviewPreloadPath ? (
+            <webview
+              ref={handleWebviewRef}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+              }}
+              preload={webviewPreloadPath}
+              src="about:blank"
+              partition="persist:windev"
+            />
+          ) : (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                height: '100%',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Initializing webview...
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Claude terminal panel */}
