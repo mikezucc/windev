@@ -508,11 +508,11 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
           <Stack direction="row" alignItems="center" spacing={0.5}>
             <TerminalIcon sx={{ fontSize: 16, color: '#82aaff' }} />
             <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#e0e0e0' }}>
-              Claude Code
+              Agent
             </Typography>
             {shellId && isShellReady && (
               <Chip
-                label="Connected"
+                label="On"
                 size="small"
                 sx={{ 
                   height: 16, 
