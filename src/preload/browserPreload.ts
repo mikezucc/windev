@@ -58,7 +58,7 @@ const browserAPI: BrowserAPI = {
   },
 
   claudeShellResize: (shellId: string, cols: number, rows: number) => {
-    return ipcRenderer.invoke(IpcChannels.CLAUDE_SHELL_RESIZE, shellId, cols, rows);
+    return ipcRenderer.invoke(IpcChannels.CLAUDE_SHELL_RESIZE, { shellId, cols, rows });
   },
 
   onClaudeShellOutput: (callback: (shellId: string, output: string) => void) => {

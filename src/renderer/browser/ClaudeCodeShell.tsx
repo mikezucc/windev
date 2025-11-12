@@ -32,7 +32,6 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const scrollLockRef = useRef<boolean>(false);
 
   // Handle file drop
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -246,30 +245,8 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
       fitAddon.fit();
     }, 0);
     
-    // Focus the terminal and set up focus handling
+    // Focus the terminal
     term.focus();
-    
-    // Add scroll event listener to detect manual scrolling
-    term.onScroll(() => {
-      if (!xtermRef.current) return;
-      
-      const buffer = xtermRef.current.buffer.active;
-      const isAtBottom = buffer.viewportY === buffer.baseY;
-      
-      // User is manually scrolling, so lock scroll position
-      scrollLockRef.current = !isAtBottom;
-    });
-    
-    // // Prevent terminal scrolling with keyboard
-    // const viewport = terminalRef.current.querySelector('.xterm-viewport');
-    // if (viewport) {
-    //   viewport.addEventListener('keydown', (e) => {
-    //     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'].includes((e as KeyboardEvent).key)) {
-    //       e.preventDefault();
-    //       e.stopPropagation();
-    //     }
-    //   }, true);
-    // }
 
     return () => {
       term.dispose();
@@ -293,15 +270,18 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
 
   // Handle terminal resize
   useEffect(() => {
-    if (!fitAddonRef.current || !shellId || !xtermRef.current) return;
+    if (!fitAddonRef.current || !xtermRef.current) return;
 
     const handleResize = () => {
       if (fitAddonRef.current && xtermRef.current) {
         fitAddonRef.current.fit();
         const { cols, rows } = xtermRef.current;
 
-        // Send resize to PTY
-        window.browserAPI.claudeShellResize(shellId, cols, rows);
+        // Only send resize to PTY if we have a shell
+        if (shellId) {
+          console.log(`PTY resize: ${cols}x${rows} for shell ${shellId}`);
+          window.browserAPI.claudeShellResize(shellId, cols, rows);
+        }
       }
     };
 
@@ -310,8 +290,10 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
       resizeObserver.observe(terminalRef.current);
     }
 
-    // Initial resize
-    handleResize();
+    // Initial resize when effect runs (only if shell exists)
+    if (shellId) {
+      handleResize();
+    }
 
     return () => {
       resizeObserver.disconnect();
@@ -322,33 +304,10 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
   useEffect(() => {
     const handleOutput = (id: string, output: string) => {
       if (id !== shellId || !xtermRef.current) return;
-      
-      // If scroll is locked (user has scrolled up), don't auto-scroll
-      if (scrollLockRef.current) {
-        xtermRef.current.write(output);
-        return;
-      }
-      
-      // Store current viewport position before writing
-      const buffer = xtermRef.current.buffer.active;
-      const viewportY = buffer.viewportY;
-      const baseY = buffer.baseY;
-      
-      // Check if we're at the bottom
-      const isAtBottom = viewportY === baseY;
-      
-      // Write the output
+
+      // Just write the output - xterm will handle scrolling naturally
+      // Don't force scrollToBottom as it interferes with carriage returns (\r)
       xtermRef.current.write(output);
-      
-      // Only auto-scroll if we were at the bottom and scroll isn't locked
-      if (isAtBottom && !scrollLockRef.current) {
-        // Use setTimeout to ensure the write has completed
-        setTimeout(() => {
-          if (xtermRef.current && !scrollLockRef.current) {
-            xtermRef.current.scrollToBottom();
-          }
-        }, 0);
-      }
     };
 
     const handleError = (id: string, error: string) => {
@@ -450,6 +409,16 @@ export const ClaudeCodeShellPanel = React.forwardRef<ClaudeCodeShellPanelRef, Cl
       console.log('Received shell ID:', id);
       setShellId(id);
       setIsShellReady(true);
+
+      // Immediately send terminal dimensions to PTY after shell is ready
+      setTimeout(() => {
+        if (xtermRef.current && fitAddonRef.current) {
+          fitAddonRef.current.fit();
+          const { cols, rows } = xtermRef.current;
+          console.log(`Initial PTY resize for shell ${id}: ${cols}x${rows}`);
+          window.browserAPI.claudeShellResize(id, cols, rows);
+        }
+      }, 100);
     };
 
     window.browserAPI.onSetShellId(handleSetShellId);

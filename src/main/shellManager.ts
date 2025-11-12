@@ -166,10 +166,12 @@ export class ShellManager extends EventEmitter {
   resizeShell(shellId: string, cols: number, rows: number): boolean {
     const shellInfo = this.shells.get(shellId);
     if (!shellInfo) {
+      console.error(`Cannot resize shell ${shellId}: shell not found`);
       return false;
     }
 
     try {
+      console.log(`Resizing PTY ${shellId} to ${cols}x${rows}`);
       shellInfo.pty.resize(cols, rows);
       return true;
     } catch (error) {
