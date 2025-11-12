@@ -21,11 +21,11 @@ export const DebugOutputPanel: React.FC<DebugOutputPanelProps> = ({
   const getMessageIcon = (type: BuilderConsoleMessage['type']) => {
     switch (type) {
       case 'error':
-        return <ErrorIcon sx={{ fontSize: 14, color: '#f07178' }} />;
+        return <ErrorIcon sx={{ fontSize: 14, color: '#d32f2f' }} />;
       case 'warning':
-        return <WarningIcon sx={{ fontSize: 14, color: '#ffcb6b' }} />;
+        return <WarningIcon sx={{ fontSize: 14, color: '#f57c00' }} />;
       case 'info':
-        return <InfoIcon sx={{ fontSize: 14, color: '#82aaff' }} />;
+        return <InfoIcon sx={{ fontSize: 14, color: '#1976d2' }} />;
       default:
         return null;
     }
@@ -34,15 +34,15 @@ export const DebugOutputPanel: React.FC<DebugOutputPanelProps> = ({
   const getMessageColor = (type: BuilderConsoleMessage['type']) => {
     switch (type) {
       case 'error':
-        return '#f07178';
+        return '#d32f2f';
       case 'warning':
-        return '#ffcb6b';
+        return '#f57c00';
       case 'info':
-        return '#82aaff';
+        return '#1976d2';
       case 'debug':
-        return '#999';
+        return '#757575';
       default:
-        return '#e0e0e0';
+        return '#424242';
     }
   };
 
@@ -52,18 +52,18 @@ export const DebugOutputPanel: React.FC<DebugOutputPanelProps> = ({
       flexDirection="column"
       height="100%"
       sx={{
-        bgcolor: '#0d0d0d',
-        color: '#e0e0e0',
+        bgcolor: 'background.paper',
+        color: 'text.primary',
       }}
     >
       <Paper
         elevation={0}
         sx={{
-          p: 0.5,
+          p: 1,
           borderBottom: 1,
-          borderColor: '#2a2a2a',
+          borderColor: 'divider',
           borderRadius: 0,
-          bgcolor: '#1a1a1a',
+          bgcolor: 'background.paper',
         }}
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -75,7 +75,7 @@ export const DebugOutputPanel: React.FC<DebugOutputPanelProps> = ({
               <IconButton
                 size="small"
                 onClick={onClear}
-                sx={{ p: 0.5, color: '#666', '&:hover': { color: '#e0e0e0' } }}
+                sx={{ p: 0.5 }}
               >
                 <ClearIcon sx={{ fontSize: 16 }} />
               </IconButton>
@@ -103,13 +103,10 @@ export const DebugOutputPanel: React.FC<DebugOutputPanelProps> = ({
               key={index}
               sx={{
                 mb: 0.5,
-                p: 0.5,
+                p: 1,
                 borderLeft: 3,
                 borderColor: getMessageColor(msg.type),
-                bgcolor: 'rgba(255,255,255,0.02)',
-                '&:hover': {
-                  bgcolor: 'rgba(255,255,255,0.05)',
-                },
+                bgcolor: 'rgba(0,0,0,0.02)',
               }}
             >
               <Stack direction="row" alignItems="flex-start" spacing={0.5}>
@@ -131,7 +128,7 @@ export const DebugOutputPanel: React.FC<DebugOutputPanelProps> = ({
                       variant="caption"
                       sx={{
                         fontSize: '0.65rem',
-                        color: '#666',
+                        color: 'text.secondary',
                         display: 'block',
                         mt: 0.25,
                       }}
@@ -147,7 +144,7 @@ export const DebugOutputPanel: React.FC<DebugOutputPanelProps> = ({
                     <IconButton
                       size="small"
                       onClick={() => onFixError(msg)}
-                      sx={{ p: 0.25, color: '#666', '&:hover': { color: '#82aaff' } }}
+                      sx={{ p: 0.25 }}
                     >
                       <BuildIcon sx={{ fontSize: 14 }} />
                     </IconButton>

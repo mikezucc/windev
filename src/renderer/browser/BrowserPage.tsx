@@ -658,7 +658,7 @@ export const BrowserPage: React.FC = () => {
   };
 
   return (
-    <Box display="flex" flexDirection="column" height="100vh">
+    <Box display="flex" flexDirection="column" height="100vh" bgcolor="background.default">
       <Paper
         elevation={0}
         sx={{
@@ -666,6 +666,7 @@ export const BrowserPage: React.FC = () => {
           borderBottom: 1,
           borderColor: 'divider',
           borderRadius: 0,
+          bgcolor: 'background.paper',
         }}
       >
         <Stack direction="row" spacing={1} alignItems="center">
@@ -832,13 +833,13 @@ export const BrowserPage: React.FC = () => {
       )}
 
       <Box display="flex" flex={1} overflow="hidden" position="relative">
-        <Box 
-          flex={1} 
-          display="flex" 
+        <Box
+          flex={1}
+          display="flex"
           alignItems="stretch"
           justifyContent="stretch"
           sx={{
-            backgroundColor: responsiveSize ? 'grey.100' : 'transparent',
+            backgroundColor: responsiveSize ? '#f5f5f5' : 'background.default',
             position: 'relative',
             overflow: responsiveSize ? 'auto' : 'hidden'
           }}
@@ -857,12 +858,6 @@ export const BrowserPage: React.FC = () => {
                 boxShadow: 2,
                 overflow: 'hidden',
                 transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  '& .zoom-controls': {
-                    maxWidth: '200px',
-                    opacity: 1,
-                  }
-                }
               }}
             >
               <Tooltip title={`Zoom: ${Math.round(webviewZoom * 100)}%`}>
@@ -943,9 +938,9 @@ export const BrowserPage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  backgroundColor: 'grey.200',
-                  px: 1,
-                  py: 0.5,
+                  backgroundColor: '#e8e8e8',
+                  px: 1.5,
+                  py: 0.75,
                   borderBottom: 1,
                   borderColor: 'divider',
                   cursor: isDraggingWebview ? 'grabbing' : 'grab',
@@ -1036,10 +1031,6 @@ export const BrowserPage: React.FC = () => {
                     bottom: 0,
                     width: 8,
                     cursor: 'ew-resize',
-                    '&:hover': {
-                      backgroundColor: 'primary.main',
-                      opacity: 0.3
-                    }
                   }}
                   onMouseDown={(e) => {
                     e.preventDefault();
@@ -1073,10 +1064,6 @@ export const BrowserPage: React.FC = () => {
                     bottom: 0,
                     width: 8,
                     cursor: 'ew-resize',
-                    '&:hover': {
-                      backgroundColor: 'primary.main',
-                      opacity: 0.3
-                    }
                   }}
                   onMouseDown={(e) => {
                     e.preventDefault();
@@ -1110,10 +1097,6 @@ export const BrowserPage: React.FC = () => {
                     bottom: -4,
                     height: 8,
                     cursor: 'ns-resize',
-                    '&:hover': {
-                      backgroundColor: 'primary.main',
-                      opacity: 0.3
-                    }
                   }}
                   onMouseDown={(e) => {
                     e.preventDefault();
@@ -1147,10 +1130,6 @@ export const BrowserPage: React.FC = () => {
                     width: 16,
                     height: 16,
                     cursor: 'nesw-resize',
-                    '&:hover': {
-                      backgroundColor: 'primary.main',
-                      opacity: 0.3
-                    }
                   }}
                   onMouseDown={(e) => {
                     e.preventDefault();
@@ -1189,10 +1168,6 @@ export const BrowserPage: React.FC = () => {
                     width: 16,
                     height: 16,
                     cursor: 'nwse-resize',
-                    '&:hover': {
-                      backgroundColor: 'primary.main',
-                      opacity: 0.3
-                    }
                   }}
                   onMouseDown={(e) => {
                     e.preventDefault();
@@ -1232,10 +1207,6 @@ export const BrowserPage: React.FC = () => {
             width: 8,
             cursor: 'col-resize',
             backgroundColor: 'divider',
-            transition: 'background-color 0.2s',
-            '&:hover': {
-              backgroundColor: 'action.hover',
-            },
             '&::before': {
               content: '""',
               position: 'absolute',
@@ -1307,10 +1278,6 @@ export const BrowserPage: React.FC = () => {
                 height: 8,
                 cursor: 'row-resize',
                 backgroundColor: 'divider',
-                transition: 'background-color 0.2s',
-                '&:hover': {
-                  backgroundColor: 'action.hover',
-                },
                 '&::before': {
                   content: '""',
                   position: 'absolute',
