@@ -15,10 +15,10 @@ export class ShellManager extends EventEmitter {
   private shells: Map<string, ShellInfo> = new Map();
   private shellCounter = 0;
 
-  createShell(repoPath: string, windowId: string): string {
+  createShell(repoPath: string, windowId: string, shellCommand: 'claude' | 'codex' = 'claude'): string {
     const shellId = `shell-${++this.shellCounter}`;
 
-    console.log(`Creating shell: ${shellId} for window: ${windowId}, repo: ${repoPath}`);
+    console.log(`Creating shell: ${shellId} for window: ${windowId}, repo: ${repoPath}, command: ${shellCommand}`);
 
     try {
       // Get the shell to use (prefer zsh, fallback to bash)
@@ -84,14 +84,12 @@ export class ShellManager extends EventEmitter {
         createdAt: new Date()
       });
 
-      // Send initial message and run claude command
+      // Send initial message and run configured shell command
       setTimeout(() => {
-        // this.emit('output', shellId, windowId, `Claude Code shell initialized in ${repoPath}\n`);
-
-        // Wait a bit for shell to be ready, then run claude command
+        // Wait a bit for shell to be ready, then run the configured command
         setTimeout(() => {
-          console.log('Running claude command automatically...');
-          shellPty.write('claude\r');
+          console.log(`Running ${shellCommand} command automatically...`);
+          shellPty.write(`${shellCommand}\r`);
         }, 500);
       }, 100);
 

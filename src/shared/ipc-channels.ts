@@ -39,6 +39,7 @@ export interface Service {
   url: string;
   repoPath: string;
   windowPrefs: WindowPreferences;
+  shellCommand?: 'claude' | 'codex';
 }
 
 export interface WindowPreferences {
@@ -57,6 +58,7 @@ export interface BrowserWindowOptions {
   x?: number;
   y?: number;
   repoPath: string;
+  shellCommand?: 'claude' | 'codex';
 }
 
 export interface BuilderConsoleMessage {

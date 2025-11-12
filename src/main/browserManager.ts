@@ -88,13 +88,14 @@ class BrowserManager {
           // Create shell session for this window
           if (options.repoPath) {
             try {
-              const shellId = shellManager.createShell(options.repoPath, windowId);
+              const shellCommand = options.shellCommand || 'claude';
+              const shellId = shellManager.createShell(options.repoPath, windowId, shellCommand);
               const windowInfo = this.windows.get(windowId);
               if (windowInfo) {
                 windowInfo.shellId = shellId;
               }
               win.webContents.send('set-shell-id', shellId);
-              console.log(`Created shell ${shellId} for window ${windowId}`);
+              console.log(`Created shell ${shellId} for window ${windowId} with command: ${shellCommand}`);
             } catch (error) {
               console.error('Failed to create shell:', error);
             }

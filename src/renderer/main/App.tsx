@@ -15,9 +15,22 @@ import {
   TextField,
   Container,
   Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Divider,
 } from '@mui/material';
 import { Delete, Edit, OpenInBrowser, Add, Folder } from '@mui/icons-material';
 import { Service } from '../../shared/ipc-channels';
+
+// Helper to replace home directory with ~
+const formatPath = (path: string): string => {
+  if (!path) return path;
+  // Get the home directory from the path (e.g., /Users/michaelzuccarino)
+  const homePattern = /^\/Users\/[^/]+/;
+  return path.replace(homePattern, '~');
+};
 
 declare global {
   interface Window {
@@ -36,6 +49,7 @@ interface ServiceFormData {
   name: string;
   url: string;
   repoPath: string;
+  shellCommand: 'claude' | 'codex';
   windowPrefs: {
     width: number;
     height: number;
@@ -50,6 +64,7 @@ export default function App() {
     name: '',
     url: '',
     repoPath: '',
+    shellCommand: 'claude',
     windowPrefs: {
       width: 1400,
       height: 900,
@@ -74,6 +89,7 @@ export default function App() {
         name: service.name,
         url: service.url,
         repoPath: service.repoPath,
+        shellCommand: service.shellCommand || 'claude',
         windowPrefs: service.windowPrefs,
       });
     } else {
@@ -82,6 +98,7 @@ export default function App() {
         name: '',
         url: '',
         repoPath: '',
+        shellCommand: 'claude',
         windowPrefs: {
           width: 1400,
           height: 900,
@@ -143,6 +160,7 @@ export default function App() {
       x: service.windowPrefs.x,
       y: service.windowPrefs.y,
       repoPath: service.repoPath,
+      shellCommand: service.shellCommand || 'claude',
     });
 
     if (!result.success) {
@@ -154,73 +172,82 @@ export default function App() {
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h4" component="h1">
-          Windev Services
+          Projects
         </Typography>
         <Button
           variant="contained"
           startIcon={<Add />}
           onClick={() => handleOpenDialog()}
         >
-          Add Service
+          Add Project
         </Button>
       </Box>
 
-      <Paper>
-        <List>
-          {services.length === 0 ? (
-            <ListItem>
-              <ListItemText
-                primary="No services yet"
-                secondary="Click 'Add Service' to create your first service"
-              />
-            </ListItem>
-          ) : (
-            services.map((service) => (
-              <ListItem key={service.id}>
-                <ListItemText
-                  primary={service.name}
-                  secondary={
-                    <>
-                      <Typography component="span" variant="body2" color="text.primary">
-                        {service.url}
-                      </Typography>
-                      <br />
-                      <Typography component="span" variant="body2" color="text.secondary">
-                        {service.repoPath}
-                      </Typography>
-                    </>
-                  }
-                />
-                <ListItemSecondaryAction>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {services.length === 0 ? (
+          <Paper sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="body1" color="text.secondary">
+              No services yet
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Click 'Add Service' to create your first service
+            </Typography>
+          </Paper>
+        ) : (
+          services.map((service, index) => (
+            <Paper
+              key={service.id}
+              elevation={0}
+              sx={{
+                p: 2.5,
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 1,
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 500, mb: 1 }}>
+                    {service.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.primary" sx={{ mb: 0.5 }}>
+                    {service.url}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                    {formatPath(service.repoPath)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                    Shell: {service.shellCommand || 'claude'}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
                   <IconButton
-                    edge="end"
                     aria-label="open"
                     onClick={() => handleOpen(service)}
-                    sx={{ mr: 1 }}
+                    size="small"
                   >
                     <OpenInBrowser />
                   </IconButton>
                   <IconButton
-                    edge="end"
                     aria-label="edit"
                     onClick={() => handleOpenDialog(service)}
-                    sx={{ mr: 1 }}
+                    size="small"
                   >
                     <Edit />
                   </IconButton>
                   <IconButton
-                    edge="end"
                     aria-label="delete"
                     onClick={() => handleDelete(service.id)}
+                    size="small"
                   >
                     <Delete />
                   </IconButton>
-                </ListItemSecondaryAction>
-              </ListItem>
-            ))
-          )}
-        </List>
-      </Paper>
+                </Box>
+              </Box>
+            </Paper>
+          ))
+        )}
+      </Box>
 
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{editingService ? 'Edit Service' : 'Add Service'}</DialogTitle>
@@ -258,6 +285,17 @@ export default function App() {
               Browse
             </Button>
           </Box>
+          <FormControl fullWidth margin="dense" sx={{ mt: 2 }}>
+            <InputLabel>Shell Command</InputLabel>
+            <Select
+              value={formData.shellCommand}
+              label="Shell Command"
+              onChange={(e) => setFormData({ ...formData, shellCommand: e.target.value as 'claude' | 'codex' })}
+            >
+              <MenuItem value="claude">Claude (Anthropic)</MenuItem>
+              <MenuItem value="codex">Codex (OpenAI)</MenuItem>
+            </Select>
+          </FormControl>
           <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
             <TextField
               margin="dense"
